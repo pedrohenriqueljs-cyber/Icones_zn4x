@@ -127,6 +127,7 @@
     <script>
         const stage = document.getElementById("stage");
         const toggles = new Map();
+        const removalTimers = new Map();
 
         function readMessage(data) {
             if (typeof data !== "string") {
@@ -166,6 +167,12 @@
             const opacity = Math.max(0, Math.min(1, Number(item.alpha ?? 1)));
             const pad = Math.max(2, Math.min(4, Math.round(height * 0.16)));
             const toggle = toggles.get(id) || createToggle(id);
+            const pendingRemoval = removalTimers.get(id);
+
+            if (pendingRemoval) {
+                window.clearTimeout(pendingRemoval);
+                removalTimers.delete(id);
+            }
 
             toggle.style.setProperty("--w", `${width}px`);
             toggle.style.setProperty("--h", `${height}px`);
@@ -188,7 +195,26 @@
             });
 
             toggles.forEach((node, id) => {
-                if (!active.has(id)) {
+                if (!active.has(id) && !removalTimers.has(id)) {
+                    const timer = window.setTimeout(() => {
+                        removalTimers.delete(id);
+                        if (toggles.get(id) === node) {
+                            node.remove();
+                            toggles.delete(id);
+                        }
+                    }, 180);
+
+                    removalTimers.set(id, timer);
+                }
+            });
+        }
+
+        function clearToggles() {
+            removalTimers.forEach((timer) => window.clearTimeout(timer));
+            removalTimers.clear();
+
+            toggles.forEach((node, id) => {
+                if (toggles.get(id) === node) {
                     node.remove();
                     toggles.delete(id);
                 }
@@ -232,6 +258,11 @@
 
             if (data.action === "setToggles") {
                 setToggles(data.toggles);
+                return;
+            }
+
+            if (data.action === "clearToggles") {
+                clearToggles();
             }
         });
     </script>
