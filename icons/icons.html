@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      background: transparent;
+    }
+
+    .category-icon {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #4876ff;
+      opacity: 0;
+      transform: translate3d(0, 0, 0);
+      transition:
+        opacity 120ms ease,
+        background-color 120ms ease;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      will-change: left, top, width, height, opacity;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <script>
+    const stage = document.getElementById("stage");
+    const icons = new Map();
+    const removalTimers = new Map();
+
+    function px(value) {
+      return `${Math.round(Number(value) || 0)}px`;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, Number(value) || 0));
+    }
+
+    function iconUrl(name) {
+      return `${encodeURIComponent(String(name || ""))}.png`;
+    }
+
+    function getIcon(id) {
+      if (icons.has(id)) {
+        return icons.get(id);
+      }
+
+      const el = document.createElement("span");
+      el.className = "category-icon";
+      stage.appendChild(el);
+      icons.set(id, el);
+      return el;
+    }
+
+    function setIcons(items) {
+      const alive = new Set();
+
+      for (const item of items || []) {
+        const id = String(item.id || item.name || "");
+        if (!id) continue;
+
+        alive.add(id);
+        if (removalTimers.has(id)) {
+          clearTimeout(removalTimers.get(id));
+          removalTimers.delete(id);
+        }
+
+        const el = getIcon(id);
+        const size = Math.max(8, Number(item.size) || 16);
+        const color = Array.isArray(item.color) ? item.color : [72, 118, 255];
+        const src = iconUrl(item.name || id);
+
+        el.style.left = px(item.x);
+        el.style.top = px(item.y);
+        el.style.width = px(size);
+        el.style.height = px(size);
+        el.style.backgroundColor = `rgb(${clamp(color[0], 0, 255)}, ${clamp(color[1], 0, 255)}, ${clamp(color[2], 0, 255)})`;
+        el.style.opacity = clamp(item.alpha ?? 1, 0, 1).toFixed(2);
+        el.style.webkitMaskImage = `url("${src}")`;
+        el.style.maskImage = `url("${src}")`;
+      }
+
+      for (const [id, el] of icons) {
+        if (alive.has(id) || removalTimers.has(id)) continue;
+
+        removalTimers.set(id, setTimeout(() => {
+          el.remove();
+          icons.delete(id);
+          removalTimers.delete(id);
+        }, 180));
+      }
+    }
+
+    window.__setCategoryIcons = setIcons;
+
+    window.addEventListener("message", (event) => {
+      const data = event.data || {};
+      if (data.action === "setCategoryIcons") {
+        setIcons(data.icons || []);
+      }
+    });
+
+    if (new URLSearchParams(window.location.search).has("demo")) {
+      setIcons([
+        { id: "Jogador", name: "Jogador", x: 28, y: 28, size: 18, alpha: 1, color: [72, 118, 255] },
+        { id: "Armas", name: "Armas", x: 28, y: 58, size: 18, alpha: 0.8, color: [72, 118, 255] },
+        { id: "Veiculos", name: "Veículos", x: 28, y: 88, size: 18, alpha: 0.8, color: [72, 118, 255] },
+        { id: "Players", name: "Players", x: 28, y: 118, size: 18, alpha: 0.8, color: [72, 118, 255] },
+        { id: "Exploits", name: "Exploits", x: 28, y: 148, size: 18, alpha: 0.8, color: [72, 118, 255] },
+        { id: "Configs", name: "Configs", x: 28, y: 178, size: 18, alpha: 0.8, color: [72, 118, 255] }
+      ]);
+    }
+  </script>
+</body>
+</html>
