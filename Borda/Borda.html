@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canto Côncavo</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #888;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .canto {
+      width: 200px;
+      height: 200px;
+      position: relative;
+    }
+
+    .canto canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="canto">
+    <canvas id="cantoCanvas" width="200" height="200"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('cantoCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const raio = 80;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.fillStyle = 'black';
+    ctx.beginPath();
+
+    // Começa no ponto onde o arco termina no topo
+    ctx.moveTo(raio, 0);
+
+    // Linha para o canto superior direito (quadrado)
+    ctx.lineTo(w, 0);
+
+    // Linha para o canto inferior direito (quadrado)
+    ctx.lineTo(w, h);
+
+    // Linha para o canto inferior esquerdo (quadrado)
+    ctx.lineTo(0, h);
+
+    // Linha subindo até o ponto do arco
+    ctx.lineTo(0, raio);
+
+    // Arco côncavo (curva para dentro) no canto superior esquerdo
+    ctx.arcTo(0, 0, raio, 0, raio);
+
+    ctx.closePath();
+    ctx.fill();
+  </script>
+
+</body>
+</html>
