@@ -128,6 +128,7 @@
         const stage = document.getElementById("stage");
         const toggles = new Map();
         const removalTimers = new Map();
+        let currentView = "";
 
         function readMessage(data) {
             if (typeof data !== "string") {
@@ -186,7 +187,25 @@
             return id;
         }
 
-        function setToggles(items) {
+        function clearToggles() {
+            removalTimers.forEach((timer) => window.clearTimeout(timer));
+            removalTimers.clear();
+
+            toggles.forEach((node, id) => {
+                if (toggles.get(id) === node) {
+                    node.remove();
+                    toggles.delete(id);
+                }
+            });
+        }
+
+        function setToggles(items, view) {
+            const nextView = String(view || "");
+            if (nextView && nextView !== currentView) {
+                clearToggles();
+                currentView = nextView;
+            }
+
             const active = new Set();
             const list = Array.isArray(items) ? items : [];
 
@@ -205,18 +224,6 @@
                     }, 180);
 
                     removalTimers.set(id, timer);
-                }
-            });
-        }
-
-        function clearToggles() {
-            removalTimers.forEach((timer) => window.clearTimeout(timer));
-            removalTimers.clear();
-
-            toggles.forEach((node, id) => {
-                if (toggles.get(id) === node) {
-                    node.remove();
-                    toggles.delete(id);
                 }
             });
         }
@@ -257,7 +264,7 @@
             }
 
             if (data.action === "setToggles") {
-                setToggles(data.toggles);
+                setToggles(data.toggles, data.view);
                 return;
             }
 
