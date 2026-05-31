@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preload" as="image" href="icons/Jogador.png">
+  <link rel="preload" as="image" href="icons/Armas.png">
+  <link rel="preload" as="image" href="icons/Veículos.png">
+  <link rel="preload" as="image" href="icons/Players.png">
+  <link rel="preload" as="image" href="icons/Exploits.png">
+  <link rel="preload" as="image" href="icons/Configs.png">
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      background: transparent;
+      contain: strict;
+    }
+
+    .category-icon {
+      position: absolute;
+      width: 17px;
+      height: 17px;
+      background: #4876ff;
+      opacity: 0;
+      transform: translate3d(0, 0, 0);
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      will-change: transform, opacity;
+    }
+
+    .toggle {
+      --w: 42px;
+      --h: 20px;
+      --pad: 3px;
+      position: absolute;
+      width: var(--w);
+      height: var(--h);
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+      transition: opacity 80ms ease;
+      will-change: transform, opacity;
+    }
+
+    .track {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      border: 0;
+      overflow: hidden;
+      background: #1b1b1b;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -5px 10px rgba(0, 0, 0, 0.22);
+    }
+
+    .track::before,
+    .track::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .track::before {
+      opacity: 1;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)),
+        linear-gradient(135deg, #1b1b1b, #1b1b1b);
+    }
+
+    .track::after {
+      opacity: 0;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)),
+        linear-gradient(135deg, #1b1b1b, #1b1b1b);
+    }
+
+    .knob {
+      position: absolute;
+      top: var(--pad);
+      left: var(--pad);
+      width: calc(var(--h) - (var(--pad) * 2));
+      height: calc(var(--h) - (var(--pad) * 2));
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 28%, #ffffff 0, #ffffff 24%, #eef2ff 62%, #c7d2fe 100%);
+      box-shadow:
+        0 1px 1px rgba(255, 255, 255, 0.75) inset,
+        0 2px 7px rgba(0, 0, 0, 0.36);
+      transform: translate3d(0, 0, 0);
+      transition: transform 210ms cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform;
+    }
+
+    .toggle.is-on .track::before {
+      opacity: 0;
+    }
+
+    .toggle.is-on .track::after {
+      opacity: 1;
+    }
+
+    .toggle.is-on .knob {
+      transform: translate3d(calc(var(--w) - var(--h)), 0, 0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .toggle,
+      .track::before,
+      .track::after,
+      .knob {
+        transition-duration: 1ms;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <script>
+    const stage = document.getElementById("stage");
+    const toggles = new Map();
+    const icons = new Map();
+    const toggleRemovalTimers = new Map();
+    const iconRemovalTimers = new Map();
+    let currentView = "";
+
+    function readMessage(data) {
+      if (typeof data !== "string") {
+        return data || {};
+      }
+
+      try {
+        return JSON.parse(data);
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function px(value) {
+      return `${Math.round(Number(value) || 0)}px`;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, Number(value) || 0));
+    }
+
+    function iconUrl(name) {
+      return `icons/${encodeURIComponent(String(name || ""))}.png`;
+    }
+
+    function createToggle(id) {
+      const toggle = document.createElement("div");
+      const track = document.createElement("div");
+      const knob = document.createElement("div");
+
+      toggle.className = "toggle";
+      toggle.dataset.id = id;
+      track.className = "track";
+      knob.className = "knob";
+
+      toggle.append(track, knob);
+      stage.appendChild(toggle);
+      toggles.set(id, toggle);
+      return toggle;
+    }
+
+    function applyToggle(item, fallbackIndex) {
+      const id = String(item.id || fallbackIndex);
+      const width = Math.max(18, Number(item.w || item.width || 42));
+      const height = Math.max(12, Number(item.h || item.height || 20));
+      const x = Number(item.x || ((window.innerWidth - width) / 2));
+      const y = Number(item.y || ((window.innerHeight - height) / 2));
+      const opacity = clamp(item.alpha == null ? 1 : item.alpha, 0, 1);
+      const pad = Math.max(2, Math.min(4, Math.round(height * 0.16)));
+      const toggle = toggles.get(id) || createToggle(id);
+      const pendingRemoval = toggleRemovalTimers.get(id);
+
+      if (pendingRemoval) {
+        clearTimeout(pendingRemoval);
+        toggleRemovalTimers.delete(id);
+      }
+
+      toggle.style.setProperty("--w", px(width));
+      toggle.style.setProperty("--h", px(height));
+      toggle.style.setProperty("--pad", px(pad));
+      toggle.style.width = px(width);
+      toggle.style.height = px(height);
+      toggle.style.opacity = opacity.toFixed(2);
+      toggle.style.transform = `translate3d(${px(x)}, ${px(y)}, 0)`;
+      toggle.classList.toggle("is-on", Boolean(item.state));
+      return id;
+    }
+
+    function clearToggles() {
+      toggleRemovalTimers.forEach((timer) => clearTimeout(timer));
+      toggleRemovalTimers.clear();
+
+      toggles.forEach((node, id) => {
+        if (toggles.get(id) === node) {
+          node.remove();
+          toggles.delete(id);
+        }
+      });
+    }
+
+    function setToggles(items, view) {
+      const nextView = String(view || "");
+      if (nextView && nextView !== currentView) {
+        clearToggles();
+        currentView = nextView;
+      }
+
+      const active = new Set();
+      const list = Array.isArray(items) ? items : [];
+
+      for (let i = 0; i < list.length; i += 1) {
+        active.add(applyToggle(list[i], i));
+      }
+
+      toggles.forEach((node, id) => {
+        if (active.has(id) || toggleRemovalTimers.has(id)) return;
+
+        const timer = setTimeout(() => {
+          toggleRemovalTimers.delete(id);
+          if (toggles.get(id) === node) {
+            node.remove();
+            toggles.delete(id);
+          }
+        }, 45);
+
+        toggleRemovalTimers.set(id, timer);
+      });
+    }
+
+    function createIcon(id) {
+      const icon = document.createElement("span");
+      icon.className = "category-icon";
+      icon.dataset.id = id;
+      stage.appendChild(icon);
+      icons.set(id, icon);
+      return icon;
+    }
+
+    function applyIcon(item, fallbackIndex) {
+      const id = String(item.id || item.name || fallbackIndex);
+      const icon = icons.get(id) || createIcon(id);
+      const pendingRemoval = iconRemovalTimers.get(id);
+      const size = Math.max(8, Number(item.size) || 17);
+      const color = Array.isArray(item.color) ? item.color : [72, 118, 255];
+      const src = iconUrl(item.name || id);
+
+      if (pendingRemoval) {
+        clearTimeout(pendingRemoval);
+        iconRemovalTimers.delete(id);
+      }
+
+      icon.style.left = px(item.x);
+      icon.style.top = px(item.y);
+      icon.style.width = px(size);
+      icon.style.height = px(size);
+      icon.style.opacity = clamp(item.alpha == null ? 1 : item.alpha, 0, 1).toFixed(2);
+      icon.style.backgroundColor = `rgb(${clamp(color[0], 0, 255)}, ${clamp(color[1], 0, 255)}, ${clamp(color[2], 0, 255)})`;
+      icon.style.webkitMaskImage = `url("${src}")`;
+      icon.style.maskImage = `url("${src}")`;
+      return id;
+    }
+
+    function setIcons(items) {
+      const active = new Set();
+      const list = Array.isArray(items) ? items : [];
+
+      for (let i = 0; i < list.length; i += 1) {
+        active.add(applyIcon(list[i], i));
+      }
+
+      icons.forEach((node, id) => {
+        if (active.has(id) || iconRemovalTimers.has(id)) return;
+
+        const timer = setTimeout(() => {
+          iconRemovalTimers.delete(id);
+          if (icons.get(id) === node) {
+            node.remove();
+            icons.delete(id);
+          }
+        }, 60);
+
+        iconRemovalTimers.set(id, timer);
+      });
+    }
+
+    function setOverlay(data) {
+      setToggles(data.toggles || [], data.view);
+      setIcons(data.icons || []);
+    }
+
+    window.__setOverlay = setOverlay;
+    window.__setToggles = setToggles;
+    window.__setCategoryIcons = setIcons;
+
+    if (new URLSearchParams(window.location.search).has("demo")) {
+      setOverlay({
+        view: "demo",
+        toggles: [
+          { id: "one", x: 80, y: 38, w: 38, h: 18, state: true },
+          { id: "two", x: 80, y: 72, w: 38, h: 18, state: false }
+        ],
+        icons: [
+          { id: "Jogador", name: "Jogador", x: 28, y: 28, size: 17, alpha: 1, color: [72, 118, 255] },
+          { id: "Armas", name: "Armas", x: 28, y: 58, size: 17, alpha: 0.85, color: [72, 118, 255] },
+          { id: "Veiculos", name: "Veículos", x: 28, y: 88, size: 17, alpha: 0.85, color: [72, 118, 255] }
+        ]
+      });
+    }
+
+    window.addEventListener("message", (event) => {
+      const data = readMessage(event.data);
+
+      if (data.action === "setOverlay") {
+        setOverlay(data);
+        return;
+      }
+
+      if (data.action === "setToggles") {
+        setToggles(data.toggles || [], data.view);
+        return;
+      }
+
+      if (data.action === "setCategoryIcons") {
+        setIcons(data.icons || []);
+        return;
+      }
+
+      if (data.action === "clearToggles") {
+        clearToggles();
+      }
+    });
+  </script>
+</body>
+</html>
