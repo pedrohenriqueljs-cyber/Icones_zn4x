@@ -4,12 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        :root {
-            color-scheme: dark;
-        }
+        :root { color-scheme: dark; }
 
-        html,
-        body {
+        html, body {
             width: 100%;
             height: 100%;
             margin: 0;
@@ -34,23 +31,17 @@
             height: var(--h);
             opacity: 1;
             transform: translate3d(0, 0, 0);
-            transition: opacity 160ms ease;
-            will-change: transform, opacity;
+            transition: opacity 80ms ease;
+            contain: layout style paint;
         }
 
         .track {
             position: absolute;
             inset: 0;
             border-radius: 999px;
-            border: 0;
             overflow: hidden;
             background: #1b1b1b;
-            box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.08),
-                inset 0 -5px 10px rgba(0, 0, 0, 0.22);
-            transition:
-                border-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
-                box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -5px 10px rgba(0, 0, 0, 0.22);
         }
 
         .track::before,
@@ -59,22 +50,13 @@
             position: absolute;
             inset: 0;
             border-radius: inherit;
-            transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
+            transition: opacity 140ms cubic-bezier(0.22, 1, 0.36, 1);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent), #1b1b1b;
         }
 
-        .track::before {
-            opacity: 1;
-            background:
-                linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)),
-                linear-gradient(135deg, #1b1b1b, #1b1b1b);
-        }
-
-        .track::after {
-            opacity: 0;
-            background:
-                linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)),
-                linear-gradient(135deg, #1b1b1b, #1b1b1b);
-        }
+        .track::after { opacity: 0; }
+        .toggle.is-on .track::before { opacity: 0; }
+        .toggle.is-on .track::after { opacity: 1; }
 
         .knob {
             position: absolute;
@@ -83,41 +65,14 @@
             width: calc(var(--h) - (var(--pad) * 2));
             height: calc(var(--h) - (var(--pad) * 2));
             border-radius: 50%;
-            background:
-                radial-gradient(circle at 35% 28%, #ffffff 0, #ffffff 24%, #eef2ff 62%, #c7d2fe 100%);
-            box-shadow:
-                0 1px 1px rgba(255, 255, 255, 0.75) inset,
-                0 2px 7px rgba(0, 0, 0, 0.36);
+            background: radial-gradient(circle at 35% 28%, #fff 0, #eef2ff 62%, #c7d2fe 100%);
+            box-shadow: 0 1px 1px rgba(255, 255, 255, 0.75) inset, 0 2px 7px rgba(0, 0, 0, 0.36);
             transform: translate3d(0, 0, 0);
-            transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
-            will-change: transform;
-        }
-
-        .toggle.is-on .track {
-            border-color: transparent;
-            box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.08),
-                inset 0 -5px 10px rgba(0, 0, 0, 0.22);
-        }
-
-        .toggle.is-on .track::before {
-            opacity: 0;
-        }
-
-        .toggle.is-on .track::after {
-            opacity: 1;
+            transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .toggle.is-on .knob {
             transform: translate3d(calc(var(--w) - var(--h)), 0, 0);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .toggle,
-            .track,
-            .knob {
-                transition-duration: 1ms;
-            }
         }
     </style>
 </head>
@@ -128,34 +83,23 @@
         const stage = document.getElementById("stage");
         const toggles = new Map();
         const removalTimers = new Map();
-        let currentView = "";
 
         function readMessage(data) {
-            if (typeof data !== "string") {
-                return data || {};
-            }
-
-            try {
-                return JSON.parse(data);
-            } catch (error) {
-                return {};
-            }
+            if (typeof data !== "string") return data || {};
+            try { return JSON.parse(data); } catch (_) { return {}; }
         }
 
         function createToggle(id) {
             const toggle = document.createElement("div");
             const track = document.createElement("div");
             const knob = document.createElement("div");
-
             toggle.className = "toggle";
             toggle.dataset.id = id;
             track.className = "track";
             knob.className = "knob";
-
             toggle.append(track, knob);
             stage.appendChild(toggle);
             toggles.set(id, toggle);
-
             return toggle;
         }
 
@@ -163,15 +107,15 @@
             const id = String(item.id ?? fallbackIndex);
             const width = Math.max(18, Number(item.w ?? item.width ?? 42));
             const height = Math.max(12, Number(item.h ?? item.height ?? 20));
-            const x = Number(item.x ?? ((window.innerWidth - width) / 2));
-            const y = Number(item.y ?? ((window.innerHeight - height) / 2));
+            const x = Number(item.x ?? 0);
+            const y = Number(item.y ?? 0);
             const opacity = Math.max(0, Math.min(1, Number(item.alpha ?? 1)));
             const pad = Math.max(2, Math.min(4, Math.round(height * 0.16)));
             const toggle = toggles.get(id) || createToggle(id);
             const pendingRemoval = removalTimers.get(id);
 
             if (pendingRemoval) {
-                window.clearTimeout(pendingRemoval);
+                clearTimeout(pendingRemoval);
                 removalTimers.delete(id);
             }
 
@@ -183,29 +127,17 @@
             toggle.style.opacity = opacity;
             toggle.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
             toggle.classList.toggle("is-on", Boolean(item.state));
-
             return id;
         }
 
         function clearToggles() {
-            removalTimers.forEach((timer) => window.clearTimeout(timer));
+            removalTimers.forEach((timer) => clearTimeout(timer));
             removalTimers.clear();
-
-            toggles.forEach((node, id) => {
-                if (toggles.get(id) === node) {
-                    node.remove();
-                    toggles.delete(id);
-                }
-            });
+            toggles.forEach((node) => node.remove());
+            toggles.clear();
         }
 
-        function setToggles(items, view) {
-            const nextView = String(view || "");
-            if (nextView && nextView !== currentView) {
-                clearToggles();
-                currentView = nextView;
-            }
-
+        function setToggles(items) {
             const active = new Set();
             const list = Array.isArray(items) ? items : [];
 
@@ -214,63 +146,24 @@
             });
 
             toggles.forEach((node, id) => {
-                if (!active.has(id) && !removalTimers.has(id)) {
-                    const timer = window.setTimeout(() => {
-                        removalTimers.delete(id);
-                        if (toggles.get(id) === node) {
-                            node.remove();
-                            toggles.delete(id);
-                        }
-                    }, 180);
-
-                    removalTimers.set(id, timer);
-                }
+                if (active.has(id) || removalTimers.has(id)) return;
+                node.style.opacity = "0";
+                removalTimers.set(id, setTimeout(() => {
+                    removalTimers.delete(id);
+                    if (toggles.get(id) === node) {
+                        node.remove();
+                        toggles.delete(id);
+                    }
+                }, 32));
             });
         }
 
-        function setToggle(state, id) {
-            setToggles([{
-                id: id || "single",
-                state: Boolean(state)
-            }]);
-        }
-
-        window.setToggle = setToggle;
         window.setToggles = setToggles;
-
-        if (new URLSearchParams(window.location.search).has("preview")) {
-            let enabled = true;
-
-            setToggles([
-                { id: "preview-on", x: 48, y: 42, w: 48, h: 24, state: true },
-                { id: "preview-off", x: 48, y: 82, w: 48, h: 24, state: false }
-            ]);
-
-            window.setInterval(() => {
-                enabled = !enabled;
-                setToggles([
-                    { id: "preview-on", x: 48, y: 42, w: 48, h: 24, state: enabled },
-                    { id: "preview-off", x: 48, y: 82, w: 48, h: 24, state: !enabled }
-                ]);
-            }, 900);
-        }
 
         window.addEventListener("message", (event) => {
             const data = readMessage(event.data);
-
-            if (data.action === "setToggle") {
-                setToggle(data.state, data.id);
-                return;
-            }
-
-            if (data.action === "setToggles") {
-                setToggles(data.toggles, data.view);
-                return;
-            }
-
-            if (data.action === "clearToggles") {
-                clearToggles();
-            }
+            if (data.action === "setToggles") setToggles(data.toggles);
+            if (data.action === "clearToggles") clearToggles();
         });
     </script>
 </body>
