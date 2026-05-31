@@ -4,12 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    :root {
-      color-scheme: dark;
-    }
+    :root { color-scheme: dark; }
 
-    html,
-    body {
+    html, body {
       width: 100%;
       height: 100%;
       margin: 0;
@@ -32,16 +29,14 @@
       background: #4876ff;
       opacity: 0;
       transform: translate3d(0, 0, 0);
-      transition:
-        opacity 120ms ease,
-        background-color 120ms ease;
+      transition: opacity 60ms ease, background-color 60ms ease;
       -webkit-mask-repeat: no-repeat;
       mask-repeat: no-repeat;
       -webkit-mask-position: center;
       mask-position: center;
       -webkit-mask-size: contain;
       mask-size: contain;
-      will-change: left, top, width, height, opacity;
+      contain: layout style paint;
     }
   </style>
 </head>
@@ -66,10 +61,7 @@
     }
 
     function getIcon(id) {
-      if (icons.has(id)) {
-        return icons.get(id);
-      }
-
+      if (icons.has(id)) return icons.get(id);
       const el = document.createElement("span");
       el.className = "category-icon";
       stage.appendChild(el);
@@ -107,12 +99,12 @@
 
       for (const [id, el] of icons) {
         if (alive.has(id) || removalTimers.has(id)) continue;
-
+        el.style.opacity = "0";
         removalTimers.set(id, setTimeout(() => {
           el.remove();
           icons.delete(id);
           removalTimers.delete(id);
-        }, 180));
+        }, 32));
       }
     }
 
@@ -120,21 +112,8 @@
 
     window.addEventListener("message", (event) => {
       const data = event.data || {};
-      if (data.action === "setCategoryIcons") {
-        setIcons(data.icons || []);
-      }
+      if (data.action === "setCategoryIcons") setIcons(data.icons || []);
     });
-
-    if (new URLSearchParams(window.location.search).has("demo")) {
-      setIcons([
-        { id: "Jogador", name: "Jogador", x: 28, y: 28, size: 18, alpha: 1, color: [72, 118, 255] },
-        { id: "Armas", name: "Armas", x: 28, y: 58, size: 18, alpha: 0.8, color: [72, 118, 255] },
-        { id: "Veiculos", name: "Veículos", x: 28, y: 88, size: 18, alpha: 0.8, color: [72, 118, 255] },
-        { id: "Players", name: "Players", x: 28, y: 118, size: 18, alpha: 0.8, color: [72, 118, 255] },
-        { id: "Exploits", name: "Exploits", x: 28, y: 148, size: 18, alpha: 0.8, color: [72, 118, 255] },
-        { id: "Configs", name: "Configs", x: 28, y: 178, size: 18, alpha: 0.8, color: [72, 118, 255] }
-      ]);
-    }
   </script>
 </body>
 </html>
