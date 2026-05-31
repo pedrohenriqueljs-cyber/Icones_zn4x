@@ -219,6 +219,8 @@
 
       toggles.forEach((node, id) => {
         if (toggles.get(id) === node) {
+          node.style.transition = "none";
+          node.style.opacity = "0";
           node.remove();
           toggles.delete(id);
         }
