@@ -1,119 +1,194 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Slider Azul</title>
-
-<style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html,
     body {
-        margin: 0;
-        background: transparent;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-family: Arial, sans-serif;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+      font-family: Arial, sans-serif;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      background: transparent;
+      contain: strict;
     }
 
     .slider-box {
-        position: relative;
-        width: 260px;
-        padding-top: 25px;
+      position: absolute;
+      opacity: 1;
+      pointer-events: none;
+      transform: translate3d(0, 0, 0);
+      will-change: transform, opacity;
     }
 
     .value {
-        position: absolute;
-        top: 0;
-        left: 0;
-        transform: translateX(-50%);
-        color: white;
-        font-size: 13px;
-        pointer-events: none;
-        text-shadow: 0 1px 4px black;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: 13px;
+      line-height: 14px;
+      white-space: nowrap;
+      text-shadow: 0 1px 4px #000;
     }
 
-    input[type="range"] {
-        width: 100%;
-        appearance: none;
-        height: 6px;
-        border-radius: 10px;
-        background: transparent;
-        outline: none;
+    .track {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: #1b1b1b;
+      overflow: visible;
     }
 
-    input[type="range"]::-webkit-slider-runnable-track {
-        height: 6px;
-        border-radius: 10px;
-        background: linear-gradient(
-            to right,
-            #4876ff 0%,
-            #4876ff var(--progress),
-            #1b1b1b var(--progress),
-            #1b1b1b 100%
-        );
+    .fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: #4876ff;
     }
 
-    input[type="range"]::-webkit-slider-thumb {
-        appearance: none;
-        width: 14px;
-        height: 14px;
-        background: #ffffff;
-        border-radius: 50%;
-        cursor: pointer;
-        margin-top: -4px;
-        box-shadow: 0 0 6px rgba(72, 118, 255, 0.9);
+    .thumb {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 6px rgba(72, 118, 255, 0.9);
+      transform: translate(-50%, -50%);
     }
-
-    input[type="range"]::-moz-range-track {
-        height: 6px;
-        border-radius: 10px;
-        background: #1b1b1b;
-    }
-
-    input[type="range"]::-moz-range-progress {
-        height: 6px;
-        border-radius: 10px;
-        background: #4876ff;
-    }
-
-    input[type="range"]::-moz-range-thumb {
-        width: 14px;
-        height: 14px;
-        background: #ffffff;
-        border-radius: 50%;
-        cursor: pointer;
-        border: none;
-        box-shadow: 0 0 6px rgba(72, 118, 255, 0.9);
-    }
-</style>
+  </style>
 </head>
-
 <body>
+  <div id="stage"></div>
 
-<div class="slider-box">
-    <div class="value" id="sliderValue">123</div>
-    <input type="range" id="slider" min="0" max="200" value="123">
-</div>
+  <script>
+    const stage = document.getElementById("stage");
+    const sliders = new Map();
 
-<script>
-    const slider = document.getElementById("slider");
-    const value = document.getElementById("sliderValue");
+    function readMessage(data) {
+      if (typeof data !== "string") {
+        return data || {};
+      }
 
-    function updateSlider() {
-        const min = Number(slider.min);
-        const max = Number(slider.max);
-        const val = Number(slider.value);
-
-        const percent = ((val - min) / (max - min)) * 100;
-
-        slider.style.setProperty("--progress", percent + "%");
-        value.textContent = val;
-        value.style.left = percent + "%";
+      try {
+        return JSON.parse(data);
+      } catch (error) {
+        return {};
+      }
     }
 
-    slider.addEventListener("input", updateSlider);
-    updateSlider();
-</script>
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, Number(value) || 0));
+    }
 
+    function px(value) {
+      return `${Math.round(Number(value) || 0)}px`;
+    }
+
+    function createSlider(id) {
+      const box = document.createElement("div");
+      const value = document.createElement("div");
+      const track = document.createElement("div");
+      const fill = document.createElement("div");
+      const thumb = document.createElement("div");
+
+      box.className = "slider-box";
+      value.className = "value";
+      track.className = "track";
+      fill.className = "fill";
+      thumb.className = "thumb";
+
+      track.appendChild(fill);
+      box.append(value, track, thumb);
+      stage.appendChild(box);
+
+      const item = { box, value, track, fill, thumb };
+      sliders.set(id, item);
+      return item;
+    }
+
+    function applySlider(raw, fallbackIndex) {
+      const id = String(raw.id || fallbackIndex);
+      const item = sliders.get(id) || createSlider(id);
+      const min = Number(raw.min) || 0;
+      const max = Math.max(min + 1, Number(raw.max) || min + 1);
+      const value = clamp(raw.value, min, max);
+      const percent = clamp((value - min) / (max - min), 0, 1);
+      const width = Math.max(20, Number(raw.w) || 260);
+      const height = Math.max(16, Number(raw.h) || 35);
+      const trackY = Math.max(0, Number(raw.trackY) || 22);
+      const trackH = Math.max(3, Number(raw.trackH) || 6);
+      const knobSize = Math.max(8, Number(raw.knobSize) || 14);
+      const valueX = percent * width;
+      const alpha = clamp(raw.alpha == null ? 1 : raw.alpha, 0, 1);
+
+      item.box.style.left = px(raw.x);
+      item.box.style.top = px(raw.y);
+      item.box.style.width = px(width);
+      item.box.style.height = px(height);
+      item.box.style.opacity = alpha.toFixed(2);
+
+      item.value.textContent = String(Math.round(value));
+      item.value.style.left = px(valueX);
+      item.value.style.top = px(Math.max(0, trackY - 21));
+
+      item.track.style.top = px(trackY);
+      item.track.style.height = px(trackH);
+      item.fill.style.width = `${percent * 100}%`;
+
+      item.thumb.style.left = px(valueX);
+      item.thumb.style.top = px(trackY + (trackH / 2));
+      item.thumb.style.width = px(knobSize);
+      item.thumb.style.height = px(knobSize);
+
+      return id;
+    }
+
+    function setSliders(items) {
+      const active = new Set();
+      const list = Array.isArray(items) ? items : [];
+
+      for (let i = 0; i < list.length; i += 1) {
+        active.add(applySlider(list[i], i));
+      }
+
+      sliders.forEach((item, id) => {
+        if (active.has(id)) return;
+        item.box.remove();
+        sliders.delete(id);
+      });
+    }
+
+    window.__setSliders = setSliders;
+
+    if (new URLSearchParams(window.location.search).has("demo")) {
+      setSliders([
+        { id: "demo", x: 40, y: 40, w: 260, h: 42, value: 123, min: 0, max: 200, trackY: 25, trackH: 6, knobSize: 14 }
+      ]);
+    }
+
+    window.addEventListener("message", (event) => {
+      const data = readMessage(event.data);
+      if (data.action === "setSliders") {
+        setSliders(data.sliders || []);
+      }
+    });
+  </script>
 </body>
 </html>
