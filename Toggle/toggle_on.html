@@ -1,44 +1,54 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background-color: #1b1b1b;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100vh;
-  }
-  .toggle {
-    position: relative;
-    width: 52px;
-    height: 28px;
-    background-color: #4876ff;
-    border-radius: 14px;
-    cursor: pointer;
-    outline: none;
-    border: none;
-    box-shadow: none;
-    -webkit-appearance: none;
-    appearance: none;
-    transition: background-color 0.25s ease;
-  }
-  .toggle::after {
-    content: '';
-    position: absolute;
-    top: 3px;
-    left: 27px;
-    width: 22px;
-    height: 22px;
-    background-color: #ffffff;
-    border-radius: 50%;
-    transition: left 0.25s ease;
-    box-shadow: none;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toggle {
+      position: relative;
+      width: 52px;
+      height: 28px;
+      border: 0;
+      outline: 0;
+      border-radius: 999px;
+      background: #4876ff;
+      box-shadow: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .toggle::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 27px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: none;
+    }
+  </style>
 </head>
 <body>
   <button class="toggle" aria-label="Toggle ligado"></button>
