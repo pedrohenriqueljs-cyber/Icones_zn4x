@@ -1,70 +1,141 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Canto Côncavo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    html,
     body {
+      width: 100%;
+      height: 100%;
       margin: 0;
-      padding: 40px;
-      background: #888;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      box-sizing: border-box;
+      overflow: hidden;
+      background: transparent;
     }
 
-    .canto {
-      width: 200px;
-      height: 200px;
-      position: relative;
-    }
-
-    .canto canvas {
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       display: block;
+      pointer-events: none;
+      background: transparent;
     }
   </style>
 </head>
 <body>
-
-  <div class="canto">
-    <canvas id="cantoCanvas" width="200" height="200"></canvas>
-  </div>
+  <canvas id="shell"></canvas>
 
   <script>
-    const canvas = document.getElementById('cantoCanvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById("shell");
+    const ctx = canvas.getContext("2d");
+    let shell = null;
 
-    const raio = 80;
-    const w = canvas.width;
-    const h = canvas.height;
+    function readMessage(data) {
+      if (typeof data !== "string") {
+        return data || {};
+      }
 
-    ctx.fillStyle = 'black';
-    ctx.beginPath();
+      try {
+        return JSON.parse(data);
+      } catch (error) {
+        return {};
+      }
+    }
 
-    // Começa no ponto onde o arco termina no topo
-    ctx.moveTo(raio, 0);
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, Number(value) || 0));
+    }
 
-    // Linha para o canto superior direito (quadrado)
-    ctx.lineTo(w, 0);
+    function colorToCss(color) {
+      const list = Array.isArray(color) ? color : [0, 0, 0];
+      return `rgb(${clamp(list[0], 0, 255)}, ${clamp(list[1], 0, 255)}, ${clamp(list[2], 0, 255)})`;
+    }
 
-    // Linha para o canto inferior direito (quadrado)
-    ctx.lineTo(w, h);
+    function resizeCanvas() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const width = Math.max(1, Math.round(window.innerWidth * dpr));
+      const height = Math.max(1, Math.round(window.innerHeight * dpr));
 
-    // Linha para o canto inferior esquerdo (quadrado)
-    ctx.lineTo(0, h);
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
 
-    // Linha subindo até o ponto do arco
-    ctx.lineTo(0, raio);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw();
+    }
 
-    // Arco côncavo (curva para dentro) no canto superior esquerdo
-    ctx.arcTo(0, 0, raio, 0, raio);
+    function roundedRectPath(x, y, w, h, radius) {
+      const r = Math.min(radius, w / 2, h / 2);
 
-    ctx.closePath();
-    ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.arcTo(x + w, y, x + w, y + r, r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+      ctx.lineTo(x + r, y + h);
+      ctx.arcTo(x, y + h, x, y + h - r, r);
+      ctx.lineTo(x, y + r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      if (!shell) {
+        return;
+      }
+
+      const x = Math.round(Number(shell.x) || 0);
+      const y = Math.round(Number(shell.y) || 0);
+      const w = Math.round(Number(shell.w) || 0);
+      const h = Math.round(Number(shell.h) || 0);
+      const radius = Math.max(0, Number(shell.radius) || 14);
+
+      if (w <= 0 || h <= 0) {
+        return;
+      }
+
+      ctx.fillStyle = colorToCss(shell.color);
+      roundedRectPath(x, y, w, h, radius);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.lineWidth = 1;
+      roundedRectPath(x + 0.5, y + 0.5, w - 1, h - 1, radius);
+      ctx.stroke();
+    }
+
+    function setMenuShell(data) {
+      shell = data;
+      draw();
+    }
+
+    window.__setMenuShell = setMenuShell;
+    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("message", (event) => {
+      const data = readMessage(event.data);
+      if (data.action === "setMenuShell") {
+        setMenuShell(data);
+      }
+    });
+
+    resizeCanvas();
+
+    if (new URLSearchParams(window.location.search).has("demo")) {
+      setMenuShell({
+        x: 40,
+        y: 40,
+        w: Math.max(260, window.innerWidth - 80),
+        h: Math.max(220, window.innerHeight - 80),
+        radius: 14,
+        color: [0, 0, 0]
+      });
+    }
   </script>
-
 </body>
 </html>
