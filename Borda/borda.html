@@ -1,9 +1,9 @@
 <!doctype html>
-<!-- ZN4X border DUI -->
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preload" as="image" href="https://pedrohenriqueljs-cyber.github.io/Icones_zn4x/Borda/Borda.png?v=2">
   <style>
     :root {
       color-scheme: dark;
@@ -14,8 +14,7 @@
       --radius: 14px;
     }
 
-    html,
-    body {
+    html, body {
       width: 100%;
       height: 100%;
       margin: 0;
@@ -31,19 +30,17 @@
       background: transparent;
     }
 
+    #stage[data-visible="false"] .piece,
+    #stage[data-visible="false"] .corner,
+    #stage[data-visible="false"] .outline,
+    #stage[data-corners-ready="false"] .corner {
+      visibility: hidden;
+    }
+
     .piece {
       position: absolute;
       background: rgb(var(--menu-r), var(--menu-g), var(--menu-b));
       transform: translate3d(0, 0, 0);
-    }
-
-    .center {
-      border-radius: 0;
-    }
-
-    .side-left,
-    .side-right {
-      border-radius: 0;
     }
 
     .corner {
@@ -51,56 +48,37 @@
       width: var(--corner);
       height: var(--corner);
       object-fit: fill;
-      pointer-events: none;
       filter: brightness(0);
       transform-origin: center;
-      will-change: left, top, transform;
     }
 
-    .corner-tl {
-      transform: rotate(270deg);
-    }
-
-    .corner-tr {
-      transform: rotate(0deg);
-    }
-
-    .corner-br {
-      transform: rotate(90deg);
-    }
-
-    .corner-bl {
-      transform: rotate(180deg);
-    }
+    .corner-tl { transform: rotate(270deg); }
+    .corner-tr { transform: rotate(0deg); }
+    .corner-br { transform: rotate(90deg); }
+    .corner-bl { transform: rotate(180deg); }
 
     .outline {
       position: absolute;
       border: 1px solid rgba(48, 50, 54, 0.6);
       border-radius: var(--radius);
       box-sizing: border-box;
-      pointer-events: none;
-    }
-
-    #stage[data-visible="false"] .piece,
-    #stage[data-visible="false"] .corner,
-    #stage[data-visible="false"] .outline {
-      display: none;
     }
   </style>
 </head>
 <body>
-  <div id="stage" data-visible="false">
-    <div id="center" class="piece center"></div>
-    <div id="left" class="piece side-left"></div>
-    <div id="right" class="piece side-right"></div>
-    <img id="tl" class="corner corner-tl" src="https://pedrohenriqueljs-cyber.github.io/Icones_zn4x/Borda/Borda.png?v=1" alt="">
-    <img id="tr" class="corner corner-tr" src="https://pedrohenriqueljs-cyber.github.io/Icones_zn4x/Borda/Borda.png?v=1" alt="">
-    <img id="br" class="corner corner-br" src="https://pedrohenriqueljs-cyber.github.io/Icones_zn4x/Borda/Borda.png?v=1" alt="">
-    <img id="bl" class="corner corner-bl" src="https://pedrohenriqueljs-cyber.github.io/Icones_zn4x/Borda/Borda.png?v=1" alt="">
+  <div id="stage" data-visible="false" data-corners-ready="false">
+    <div id="center" class="piece"></div>
+    <div id="left" class="piece"></div>
+    <div id="right" class="piece"></div>
+    <img id="tl" class="corner corner-tl" src="https://pedrohenriqueljs-cyber.github.io/Icones_zn4x/Borda/Borda.png?v=2" alt="" decoding="async">
+    <img id="tr" class="corner corner-tr" src="https://pedrohenriqueljs-cyber.github.io/Icones_zn4x/Borda/Borda.png?v=2" alt="" decoding="async">
+    <img id="br" class="corner corner-br" src="https://pedrohenriqueljs-cyber.github.io/Icones_zn4x/Borda/Borda.png?v=2" alt="" decoding="async">
+    <img id="bl" class="corner corner-bl" src="https://pedrohenriqueljs-cyber.github.io/Icones_zn4x/Borda/Borda.png?v=2" alt="" decoding="async">
     <div id="outline" class="outline"></div>
   </div>
 
   <script>
+    const BORDER_IMG = "https://pedrohenriqueljs-cyber.github.io/Icones_zn4x/Borda/Borda.png?v=2";
     const stage = document.getElementById("stage");
     const center = document.getElementById("center");
     const left = document.getElementById("left");
@@ -112,6 +90,42 @@
       br: document.getElementById("br"),
       bl: document.getElementById("bl")
     };
+
+    let cornersReady = false;
+
+    function markCornersReady() {
+      if (cornersReady) return;
+      cornersReady = true;
+      stage.dataset.cornersReady = "true";
+    }
+
+    (function preloadCorners() {
+      let loaded = 0;
+      const need = 4;
+      const onDone = () => {
+        loaded += 1;
+        if (loaded >= need) markCornersReady();
+      };
+
+      Object.values(corners).forEach((img) => {
+        if (img.complete && img.naturalWidth > 0) {
+          onDone();
+          return;
+        }
+        img.addEventListener("load", onDone, { once: true });
+        img.addEventListener("error", onDone, { once: true });
+      });
+
+      const probe = new Image();
+      probe.decoding = "async";
+      probe.src = BORDER_IMG;
+      if (probe.complete) {
+        markCornersReady();
+      } else {
+        probe.addEventListener("load", markCornersReady, { once: true });
+        probe.addEventListener("error", markCornersReady, { once: true });
+      }
+    })();
 
     function px(value) {
       return `${Math.round(value)}px`;
@@ -139,10 +153,9 @@
       document.documentElement.style.setProperty("--corner", px(corner));
       document.documentElement.style.setProperty("--radius", px(radius));
 
-      place(center, x + corner, y, w - (corner * 2), h);
-      place(left, x, y + corner, corner, h - (corner * 2));
-      place(right, x + w - corner, y + corner, corner, h - (corner * 2));
-
+      place(center, x + corner, y, w - corner * 2, h);
+      place(left, x, y + corner, corner, h - corner * 2);
+      place(right, x + w - corner, y + corner, corner, h - corner * 2);
       place(corners.tl, x, y, corner, corner);
       place(corners.tr, x + w - corner, y, corner, corner);
       place(corners.br, x + w - corner, y + h - corner, corner, corner);
@@ -156,9 +169,7 @@
 
     window.addEventListener("message", (event) => {
       const data = event.data || {};
-      if (data.action === "setMenuShell") {
-        setMenuShell(data);
-      }
+      if (data.action === "setMenuShell") setMenuShell(data);
     });
   </script>
 </body>
