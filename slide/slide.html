@@ -132,10 +132,12 @@
       const percent = clamp((value - min) / (max - min), 0, 1);
       const width = Math.max(20, Number(raw.w) || 260);
       const height = Math.max(16, Number(raw.h) || 35);
+      const trackX = Math.max(0, Number(raw.trackX) || 0);
+      const trackW = Math.max(20, Number(raw.trackW) || width);
       const trackY = Math.max(0, Number(raw.trackY) || 22);
       const trackH = Math.max(3, Number(raw.trackH) || 6);
       const knobSize = Math.max(8, Number(raw.knobSize) || 14);
-      const valueX = percent * width;
+      const valueX = trackX + (percent * trackW);
       const alpha = clamp(raw.alpha == null ? 1 : raw.alpha, 0, 1);
 
       item.box.style.left = px(raw.x);
@@ -145,8 +147,11 @@
       item.box.style.opacity = alpha.toFixed(2);
 
       item.value.textContent = String(Math.round(value));
+      item.value.style.right = px(Math.max(0, width - (trackX + trackW)));
       item.value.style.top = px(Math.max(0, trackY - 21));
 
+      item.track.style.left = px(trackX);
+      item.track.style.width = px(trackW);
       item.track.style.top = px(trackY);
       item.track.style.height = px(trackH);
       item.fill.style.width = `${percent * 100}%`;
