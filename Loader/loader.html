@@ -1,0 +1,161 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+  .zn4x-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+    background: transparent;
+  }
+
+  .zn4x-card {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    width: 320px;
+    overflow: hidden;
+    font-family: 'JetBrains Mono', monospace;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+
+  .zn4x-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid #2a2a2a;
+  }
+
+  .zn4x-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #e8e8e8;
+    letter-spacing: 0.02em;
+  }
+
+  .zn4x-version {
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    padding: 2px 7px;
+    letter-spacing: 0.05em;
+  }
+
+  .zn4x-body {
+    padding: 14px 16px 16px;
+    border-bottom: 1px solid #2a2a2a;
+  }
+
+  .zn4x-body-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ddd;
+    margin: 0 0 5px;
+    letter-spacing: 0.01em;
+  }
+
+  .zn4x-body-desc {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.55;
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+
+  .zn4x-footer {
+    padding: 10px 16px 14px;
+  }
+
+  .zn4x-progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .zn4x-loading-label {
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 0.03em;
+  }
+
+  .zn4x-percent {
+    font-size: 11px;
+    font-weight: 600;
+    color: #aaa;
+    letter-spacing: 0.03em;
+  }
+
+  .zn4x-track {
+    width: 100%;
+    height: 6px;
+    background: #2e2e2e;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .zn4x-bar {
+    height: 100%;
+    border-radius: 3px;
+    background: #c0c0c0;
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+</style>
+
+<div class="zn4x-wrapper">
+  <div class="zn4x-card">
+    <div class="zn4x-titlebar">
+      <span class="zn4x-title">ZN4X Menu</span>
+      <span class="zn4x-version">1.0.0</span>
+    </div>
+    <div class="zn4x-body">
+      <p class="zn4x-body-title">Carregando Imagens</p>
+      <p class="zn4x-body-desc">Estamos carregando os arquivos necessários para a utilização do ZN4X Menu</p>
+    </div>
+    <div class="zn4x-footer">
+      <div class="zn4x-progress-row">
+        <span class="zn4x-loading-label">Carregando...</span>
+        <span class="zn4x-percent" id="pct">0%</span>
+      </div>
+      <div class="zn4x-track">
+        <div class="zn4x-bar" id="bar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let progress = 0;
+  const bar = document.getElementById('bar');
+  const pct = document.getElementById('pct');
+
+  function animateProgress() {
+    const step = Math.random() * 3 + 0.5;
+    progress = Math.min(progress + step, 100);
+    const rounded = Math.round(progress);
+    bar.style.width = rounded + '%';
+    pct.textContent = rounded + '%';
+    if (progress < 100) {
+      setTimeout(animateProgress, 80 + Math.random() * 120);
+    } else {
+      setTimeout(() => {
+        progress = 0;
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+        pct.textContent = '0%';
+        setTimeout(() => {
+          bar.style.transition = 'width 0.4s ease';
+          animateProgress();
+        }, 600);
+      }, 1200);
+    }
+  }
+
+  setTimeout(animateProgress, 400);
+</script>
