@@ -103,11 +103,15 @@
       const alpha = clamp(item.alpha == null ? 1 : item.alpha, 0, 1);
       const borderAlpha = clamp(item.borderAlpha == null ? alpha : item.borderAlpha, 0, 1);
 
-      roundedRect(x + 0.5, y + 0.5, w - 1, h - 1, radius);
+      roundedRect(x - 1, y - 1, w + 2, h + 2, radius + 1);
+      ctx.fillStyle = cssColor(item.backColor || [13, 13, 13], 1);
+      ctx.fill();
+
+      roundedRect(x, y, w, h, radius);
       ctx.fillStyle = cssColor(item.borderColor || [48, 50, 54], borderAlpha);
       ctx.fill();
 
-      roundedRect(x + 1.5, y + 1.5, w - 3, h - 3, Math.max(0, radius - 1));
+      roundedRect(x + 1, y + 1, w - 2, h - 2, Math.max(0, radius - 1));
       ctx.fillStyle = cssColor(item.fillColor || [29, 30, 34], alpha);
       ctx.fill();
     }
