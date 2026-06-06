@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="buttons"></canvas>
+
+  <script>
+    const canvas = document.getElementById("buttons");
+    const ctx = canvas.getContext("2d");
+    let items = [];
+    let readyPosted = false;
+
+    function readMessage(data) {
+      if (typeof data !== "string") {
+        return data || {};
+      }
+
+      try {
+        return JSON.parse(data);
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, Number(value) || 0));
+    }
+
+    function cssColor(color, alpha = 1) {
+      const list = Array.isArray(color) ? color : [0, 0, 0];
+      const r = Math.round(clamp(list[0], 0, 255));
+      const g = Math.round(clamp(list[1], 0, 255));
+      const b = Math.round(clamp(list[2], 0, 255));
+      return `rgba(${r}, ${g}, ${b}, ${clamp(alpha, 0, 1).toFixed(3)})`;
+    }
+
+    function resize(width, height) {
+      const w = Math.max(1, Math.round(Number(width) || window.innerWidth || 1));
+      const h = Math.max(1, Math.round(Number(height) || window.innerHeight || 1));
+
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+
+    function roundedRect(x, y, w, h, radius) {
+      const r = Math.max(0, Math.min(Number(radius) || 0, w / 2, h / 2));
+
+      if (typeof ctx.roundRect === "function") {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+        return;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.arcTo(x + w, y, x + w, y + r, r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+      ctx.lineTo(x + r, y + h);
+      ctx.arcTo(x, y + h, x, y + h - r, r);
+      ctx.lineTo(x, y + r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+    }
+
+    function drawButton(item) {
+      const x = Math.round(Number(item.x) || 0);
+      const y = Math.round(Number(item.y) || 0);
+      const w = Math.round(Number(item.w) || 0);
+      const h = Math.round(Number(item.h) || 0);
+
+      if (w <= 0 || h <= 0) {
+        return;
+      }
+
+      const radius = clamp(item.radius == null ? 5 : item.radius, 0, Math.min(w, h) / 2);
+      const alpha = clamp(item.alpha == null ? 1 : item.alpha, 0, 1);
+      const borderAlpha = clamp(item.borderAlpha == null ? alpha : item.borderAlpha, 0, 1);
+
+      roundedRect(x + 0.5, y + 0.5, w - 1, h - 1, radius);
+      ctx.fillStyle = cssColor(item.borderColor || [48, 50, 54], borderAlpha);
+      ctx.fill();
+
+      roundedRect(x + 1.5, y + 1.5, w - 3, h - 3, Math.max(0, radius - 1));
+      ctx.fillStyle = cssColor(item.fillColor || [29, 30, 34], alpha);
+      ctx.fill();
+    }
+
+    function render(payload = {}) {
+      resize(payload.width, payload.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      items = Array.isArray(payload.buttons) ? payload.buttons : [];
+      for (const item of items) {
+        drawButton(item);
+      }
+    }
+
+    async function postReady(attempt = 0) {
+      if (readyPosted) {
+        return;
+      }
+
+      try {
+        if (typeof GetParentResourceName !== "function") {
+          return;
+        }
+
+        await fetch(`https://${GetParentResourceName()}/zn4x_button_blur_ready`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=UTF-8" },
+          body: "{}"
+        });
+        readyPosted = true;
+      } catch (_) {}
+
+      if (!readyPosted && attempt < 20) {
+        setTimeout(() => postReady(attempt + 1), 500);
+      }
+    }
+
+    window.__setButtons = (buttons) => render({ buttons });
+    window.__setButtonOverlay = render;
+
+    window.addEventListener("message", (event) => {
+      const data = readMessage(event.data);
+
+      if (data.action === "setButtons") {
+        render(data);
+      }
+    });
+
+    resize();
+    render({ buttons: [] });
+    postReady();
+
+    if (new URLSearchParams(window.location.search).has("demo")) {
+      render({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        buttons: [
+          { x: 24, y: 24, w: 344, h: 27, radius: 5, fillColor: [29, 30, 34], borderColor: [48, 50, 54] },
+          { x: 24, y: 58, w: 344, h: 27, radius: 5, fillColor: [29, 30, 34], borderColor: [48, 50, 54] },
+          { x: 24, y: 92, w: 344, h: 27, radius: 5, fillColor: [34, 35, 39], borderColor: [48, 50, 54] }
+        ]
+      });
+    }
+  </script>
+</body>
+</html>
